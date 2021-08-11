@@ -30,7 +30,7 @@ app.get('/', (req, res) => {
 });
 const Schema = mongoose.Schema;
 const UserSchema = new Schema({
-  name: String,
+  username: String,
   excercises: [{
     description: String,
     duration: Number,
@@ -57,13 +57,13 @@ app.get("/api/users", function (req, res) {
 app.post('/api/users', function (req, res) {
   const userName = req.body.username;
   if (userName) {
-    UserModel.where({ name: userName }).findOne((err, user) => {
+    UserModel.where({ username: userName }).findOne((err, user) => {
       if (err) throw err
       if (!user) {
-        const newUser = new UserModel({ name: userName });
+        const newUser = new UserModel({ username: userName });
         newUser.save((err, thisUser) => {
           if (err) throw err;
-          return res.json({_id:thisUser._id,username:thisUser.name});
+          return res.json({_id:thisUser._id,username:thisUser.username});
         });
       } else {
         return res.json("Ya existe el usuario.");
