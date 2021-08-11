@@ -48,7 +48,7 @@ app.get("/is-mongoose-ok", function (req, res) {
 });
 
 app.get("/api/users", function (req, res) {
-  UserModel.find({},'name _id').exec((err, result) => {
+  UserModel.find({},'username _id').exec((err, result) => {
     if (err) res.json(err);
     res.json(result)
   });
