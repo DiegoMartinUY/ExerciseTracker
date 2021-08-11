@@ -48,7 +48,7 @@ app.get("/is-mongoose-ok", function (req, res) {
 });
 
 app.get("/api/users", function (req, res) {
-  UserModel.find().exec((err, result) => {
+  UserModel.find({},'name _id').exec((err, result) => {
     if (err) res.json(err);
     res.json(result)
   });
@@ -57,13 +57,10 @@ app.get("/api/users", function (req, res) {
 app.post('/api/users', function (req, res) {
   const userName = req.body.username;
   if (userName) {
-    console.log('before find ', userName);
     UserModel.where({ name: userName }).findOne((err, user) => {
       if (err) throw err
-      console.log('after find', user);
       if (!user) {
         const newUser = new UserModel({ name: userName });
-        console.log(newUser);
         newUser.save((err, thisUser) => {
           if (err) throw err;
           return res.json({_id:thisUser._id,username:thisUser.name});
