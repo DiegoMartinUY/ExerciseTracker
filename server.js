@@ -81,7 +81,7 @@ app.post('/api/users/:_id/exercises', (req, res) => {
     duration: req.body.duration,
     date: req.body.date
   };
-  console.log('id ', id);
+  console.log(excercise);
   UserModel.findById(id, (err, user) => {
     if (err) throw err;
     if (!user) {
@@ -100,7 +100,7 @@ app.post('/api/users/:_id/exercises', (req, res) => {
   });
 });
 
-app.get("/api/users/:_id/logs?", (req, res) => {
+app.get("/api/users/:_id/logs", (req, res) => {
   const id = req.params._id;
   const query = {
     from: req.query.from,
@@ -127,6 +127,13 @@ app.get("/api/users/:_id/logs?", (req, res) => {
     }
   }
   if(!id) throw "Error id required";
+
+  if(!query.limit && !query.from && !query.to){
+    UserModel.findById(id, (err, user) => {
+      return res.json(user)
+    })
+  }
+
   if(query.limit){
     if(isNaN(query.limit)) throw "Limit must be a number"
     searchFor.limit = true;
