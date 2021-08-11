@@ -93,7 +93,7 @@ app.post('/api/users/:_id/exercises', (req, res) => {
         user.excercises.push(excercise);
         user.save((err) => {
           if(err) throw err;
-          return res.json(`Excercise ${JSON.stringify(excercise)} added.`);
+          return res.json(user);
         })
       }
     }
