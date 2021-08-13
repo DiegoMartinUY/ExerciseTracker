@@ -98,6 +98,8 @@ app.post('/api/users/:_id/exercises', upload.none(), (req, res) => {
         user.excercises.push(excercise);
         user.save((err) => {
           if(err) throw err;
+          delete user.excercises;
+          user.excercises = [excercise];
           return res.json(user);
         })
       }
