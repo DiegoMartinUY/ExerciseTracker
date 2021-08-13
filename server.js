@@ -110,7 +110,7 @@ app.get("/api/users/:_id/logs", (req, res) => {
   const query = {
     from: req.query.from,
     to: req.query.to,
-    limit: parseInt(req.query.limit)
+    limit: req.query.limit ? parseInt(req.query.limit) : req.query.limit
   };
   console.log(id,query)
   var searchFor = {
@@ -131,14 +131,13 @@ app.get("/api/users/:_id/logs", (req, res) => {
       });
     }
   }
-  if(!id) throw "Error id required";
+  if(!id){
+    res.send("Error id required");
+  }
 
   if (!query.limit && !query.from && !query.to) {
     UserModel.findById(id, (err, user) => {
-      let ret = user;
-      ret.log = ret.excercises;
-      delete ret.excercises;
-      return res.json(ret);
+      return res.json({count:user.excercises.length});
     })
   }
 
@@ -146,6 +145,7 @@ app.get("/api/users/:_id/logs", (req, res) => {
     if(isNaN(query.limit)) throw "Limit must be a number"
     searchFor.limit = true;
   }
+
   if(query.from){
     if(query.from instanceof Date){
       searchFor.from = true;
@@ -153,6 +153,7 @@ app.get("/api/users/:_id/logs", (req, res) => {
       throw "From is not a Date";
     }
   }
+
   if(query.to){
     if(query.to instanceof Date){
       searchFor.to = true;
@@ -160,6 +161,7 @@ app.get("/api/users/:_id/logs", (req, res) => {
       throw "To is not a Date";
     }
   }
+
   console.log(searchFor)
   if(searchFor.from && searchFor.to && searchFor.limit){
     UserModel.findById(id, (err, user)=>{
@@ -184,8 +186,6 @@ app.get("/api/users/:_id/logs", (req, res) => {
         console.log(result)
       });
     })
-  }else{
-    return fromTo();
   }
 });
 
