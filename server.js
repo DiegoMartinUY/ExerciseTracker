@@ -16,13 +16,13 @@ mongoose.connect(MONGO_URI, {
   useUnifiedTopology: true,
   dbName: DB_NAME
 },
-function (error) {
-  if (error) {
-    console.log('Error al conectar con mongoDB.')
-  } else {
-    console.log('Conectado a mongoDB');
-  }
-});
+  function (error) {
+    if (error) {
+      console.log('Error al conectar con mongoDB.')
+    } else {
+      console.log('Conectado a mongoDB');
+    }
+  });
 const bodyParser = require('body-parser');
 //app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.json()) // for parsing application/json
@@ -53,7 +53,7 @@ app.get("/is-mongoose-ok", function (req, res) {
 });
 
 app.get("/api/users", function (req, res) {
-  UserModel.find({},'username _id').exec((err, result) => {
+  UserModel.find({}, 'username _id').exec((err, result) => {
     if (err) res.json(err);
     res.json(result)
   });
@@ -68,7 +68,7 @@ app.post('/api/users', function (req, res) {
         const newUser = new UserModel({ username: userName });
         newUser.save((err, thisUser) => {
           if (err) throw err;
-          return res.json({_id:thisUser._id,username:thisUser.username});
+          return res.json({ _id: thisUser._id, username: thisUser.username });
         });
       } else {
         return res.json("Ya existe el usuario.");
@@ -97,7 +97,7 @@ app.post('/api/users/:_id/exercises', upload.none(), (req, res) => {
       } else {
         user.excercises.push(excercise);
         user.save((err) => {
-          if(err) throw err;
+          if (err) throw err;
           delete user.excercises;
           user.excercises = [excercise];
           return res.json(user);
@@ -114,15 +114,15 @@ app.get("/api/users/:_id/logs", (req, res) => {
     to: req.query.to,
     limit: req.query.limit ? parseInt(req.query.limit) : req.query.limit
   };
-  console.log(id,query)
+  console.log(id, query)
   var searchFor = {
     from: false,
     to: false,
     limit: false
   }
-  var fromTo = ()=>{
+  var fromTo = () => {
     if (searchFor.from) {
-      UserModel.where({_id:id}).find({ date: { $gte: searchFor.from }, options: { limit: query.limit } }, (err, result) => {
+      UserModel.where({ _id: id }).find({ date: { $gte: searchFor.from }, options: { limit: query.limit } }, (err, result) => {
         if (err) throw "Error al buscar con limite y from";
         return res.json(result);
       });
@@ -133,61 +133,82 @@ app.get("/api/users/:_id/logs", (req, res) => {
       });
     }
   }
-  if(!id){
+  if (!id) {
     res.send("Error id required");
   }
 
   if (!query.limit && !query.from && !query.to) {
     UserModel.findById(id, (err, user) => {
-      return res.json({count:user.excercises.length});
+      return res.json({ count: user.excercises.length });
     })
   }
 
-  if(query.limit){
-    if(isNaN(query.limit)) throw "Limit must be a number"
+  if (query.limit) {
+    if (isNaN(query.limit)) throw "Limit must be a number"
     searchFor.limit = true;
   }
 
-  if(query.from){
-    if(query.from instanceof Date){
+  if (query.from) {
+    query.from = new Date(query.from);
+    console.log('from ', query.from)
+    if (query.from instanceof Date) {
       searchFor.from = true;
-    }else{
-      throw "From is not a Date";
+    } else {
+      return res.json("From is not a Date");
     }
   }
 
-  if(query.to){
-    if(query.to instanceof Date){
+  if (query.to) {
+    query.to = new Date(query.to);
+    console.log('to ', query.to)
+    if (query.to instanceof Date) {
       searchFor.to = true;
-    }else{
-      throw "To is not a Date";
+    } else {
+      return res.json("To is not a Date");
     }
   }
 
   console.log(searchFor)
-  if(searchFor.from && searchFor.to && searchFor.limit){
-    UserModel.findById(id, (err, user)=>{
+  if (searchFor.from && searchFor.to && searchFor.limit) {
+    UserModel.findById(id, (err, user) => {
       return res.json(
-        user.excercises.filter((excersice)=>{
+        user.excercises.filter((excersice) => {
           return excersice.date >= query.from && excersice.date <= query.to;
-        }).filter((excercise, index)=>{
-          if(index < query.limit) return true;
+        }).filter((excercise, index) => {
+          if (index < query.limit) return true;
         })
       )
     })
-  }else if((searchFor.from || searchFor.to) && searchFor.limit){
+  } else if ((searchFor.from || searchFor.to) && searchFor.limit) {
     return fromTo();
-  }else if(searchFor.limit){
+  } else if (searchFor.limit) {
     console.log('searching with only limit', query.limit)
-    UserModel.findById(id, (err, user)=>{
-      return res.json(user.excercises.filter((excersice, index)=>{
-        if(index < query.limit) return true;
+    UserModel.findById(id, (err, user) => {
+      return res.json(user.excercises.filter((_excersice, index) => {
+        if (index < query.limit) return true;
       }));
-      user.excercises.find({ options: { limit: query.limit } }, (err, result) => {
-        if (err) throw "Error al buscar con limite";
-        console.log(result)
-      });
     })
+  } else {
+    //Has no limit
+    if (searchFor.from && searchFor.to) {
+      UserModel.findById(id, (err, user) => {
+        return res.json(user.excercises.filter((excersice) => {
+          return excersice.date >= query.from && excersice.date <= query.to;
+        }))
+      })
+    } else if (searchFor.from) {
+      UserModel.findById(id, (err, user) => {
+        return res.json(user.excercises.filter((excersice) => {
+          return excersice.date >= query.from;
+        }))
+      })
+    } else {
+      UserModel.findById(id, (err, user) => {
+        return res.json(user.excercises.filter((excersice) => {
+          return excersice.date <= query.to;
+        }))
+      })
+    }
   }
 });
 
