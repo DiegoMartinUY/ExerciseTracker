@@ -2,9 +2,9 @@ const express = require('express');
 const app = express();
 const cors = require('cors');
 require('dotenv').config();
-const bodyParser = require('body-parser');
 const { PORT, MONGO_URI, DB_NAME } = require('./config');
-app.use(bodyParser.urlencoded({ extended: true }));
+const multer = require('multer')
+const upload = multer();
 var mongoose;
 try {
   mongoose = require("mongoose");
@@ -16,15 +16,20 @@ mongoose.connect(MONGO_URI, {
   useUnifiedTopology: true,
   dbName: DB_NAME
 },
-  function (error) {
-    if (error) {
-      console.log('Error al conectar con mongoDB.')
-    } else {
-      console.log('Conectado a mongoDB');
-    }
-  });
+function (error) {
+  if (error) {
+    console.log('Error al conectar con mongoDB.')
+  } else {
+    console.log('Conectado a mongoDB');
+  }
+});
+const bodyParser = require('body-parser');
+//app.use(bodyParser.urlencoded({ extended: true }));
+app.use(express.json()) // for parsing application/json
+app.use(express.urlencoded({ extended: true })) // for parsing application/x-www-form-urlencoded
 app.use(cors());
 app.use(express.static('public'));
+
 app.get('/', (req, res) => {
   res.sendFile(__dirname + '/views/index.html');
 });
@@ -74,14 +79,14 @@ app.post('/api/users', function (req, res) {
   }
 })
 
-app.post('/api/users/:_id/exercises', (req, res) => {
+app.post('/api/users/:_id/exercises', upload.none(), (req, res) => {
   const id = req.params._id;
   const excercise = {
     description: req.body.description,
     duration: req.body.duration,
     date: req.body.date
   };
-  console.log(excercise);
+  console.log(req.body);
   UserModel.findById(id, (err, user) => {
     if (err) throw err;
     if (!user) {
@@ -128,9 +133,12 @@ app.get("/api/users/:_id/logs", (req, res) => {
   }
   if(!id) throw "Error id required";
 
-  if(!query.limit && !query.from && !query.to){
+  if (!query.limit && !query.from && !query.to) {
     UserModel.findById(id, (err, user) => {
-      return res.json(user)
+      let ret = user;
+      ret.log = ret.excercises;
+      delete ret.excercises;
+      return res.json(ret);
     })
   }
 
