@@ -86,7 +86,6 @@ app.post('/api/users/:_id/exercises', upload.none(), (req, res) => {
     duration: req.body.duration,
     date: req.body.date
   };
-  console.log(req.body);
   UserModel.findById(id, (err, user) => {
     if (err) throw err;
     if (!user) {
@@ -108,7 +107,7 @@ app.post('/api/users/:_id/exercises', upload.none(), (req, res) => {
           username: user.username,
           duration: user.exercises[user.exercises.length - 1].duration,
           description: user.exercises[user.exercises.length - 1].description,
-          date: user.exercises[user.exercises.length - 1].date
+          date: user.exercises[user.exercises.length - 1].date.toDateString()
         });
       }
     }
@@ -116,14 +115,12 @@ app.post('/api/users/:_id/exercises', upload.none(), (req, res) => {
 });
 
 app.get("/api/users/:_id/logs", (req, res) => {
-  console.log(req.path);
   const id = req.params._id;
   const query = {
     from: req.query.from,
     to: req.query.to,
     limit: req.query.limit ? parseInt(req.query.limit) : req.query.limit
   };
-  console.log(id, query)
   var searchFor = {
     from: false,
     to: false,
@@ -147,7 +144,6 @@ app.get("/api/users/:_id/logs", (req, res) => {
 
   if (query.from) {
     query.from = new Date(query.from);
-    console.log('from ', query.from)
     if (query.from instanceof Date) {
       searchFor.from = true;
     } else {
@@ -157,7 +153,6 @@ app.get("/api/users/:_id/logs", (req, res) => {
 
   if (query.to) {
     query.to = new Date(query.to);
-    console.log('to ', query.to)
     if (query.to instanceof Date) {
       searchFor.to = true;
     } else {
@@ -167,7 +162,6 @@ app.get("/api/users/:_id/logs", (req, res) => {
 
   console.log(searchFor)
   if (searchFor.from && searchFor.to && searchFor.limit) {
-    console.log('all');
     return UserModel.findById(id, (err, user) => {
       if (err) return res.json({ error: 'Error searching user' });
       return res.json({
@@ -180,7 +174,6 @@ app.get("/api/users/:_id/logs", (req, res) => {
       })
     })
   } else if ((searchFor.from || searchFor.to) && searchFor.limit) {
-    console.log('from || to & limit');
     if (searchFor.from) {
       return UserModel.where({ _id: id }).find({ date: { $gte: searchFor.from }, options: { limit: query.limit } }, (err, result) => {
         if (err) return res.json({ error: 'Error searching user' });
@@ -193,7 +186,6 @@ app.get("/api/users/:_id/logs", (req, res) => {
       });
     }
   } else if (searchFor.limit) {
-    console.log('limit')
     return UserModel.findById(id, (err, user) => {
       if (err) return res.json({ error: 'Error searching user' });
       return res.json({
@@ -204,14 +196,9 @@ app.get("/api/users/:_id/logs", (req, res) => {
     })
   } else {
     //Has no limit
-    console.log('no limit');
     if (searchFor.from && searchFor.to) {
-      console.log('from && to');
       return UserModel.findById(id, (err, user) => {
         if (err) return res.json({ error: 'Error searching user' });
-        console.log(user.exercises.filter((exercise) => {
-          return exercise.date >= query.from && exercise.date <= query.to;
-        }))
         return res.json({
           log: user.exercises.filter((exercise) => {
             return exercise.date >= query.from && exercise.date <= query.to;
@@ -219,7 +206,6 @@ app.get("/api/users/:_id/logs", (req, res) => {
         })
       })
     } else if (searchFor.from) {
-      console.log('from');
       return UserModel.findById(id, (err, user) => {
         if (err) return res.json({ error: 'Error searching user' });
         return res.json({
@@ -230,7 +216,6 @@ app.get("/api/users/:_id/logs", (req, res) => {
       })
     } else if (searchFor.to) {
 
-      console.log('to');
       return UserModel.findById(id, (err, user) => {
         if (err) return res.json({ error: 'Error searching user' });
         return res.json({
