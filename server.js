@@ -36,7 +36,7 @@ app.get('/', (req, res) => {
 const Schema = mongoose.Schema;
 const UserSchema = new Schema({
   username: String,
-  excercises: [{
+  exercises: [{
     description: String,
     duration: Number,
     date: { type: Date, default: Date.now() }
@@ -81,7 +81,7 @@ app.post('/api/users', function (req, res) {
 
 app.post('/api/users/:_id/exercises', upload.none(), (req, res) => {
   const id = req.params._id;
-  const excercise = {
+  const exercise = {
     description: req.body.description,
     duration: req.body.duration,
     date: req.body.date
@@ -92,22 +92,31 @@ app.post('/api/users/:_id/exercises', upload.none(), (req, res) => {
     if (!user) {
       return res.json("Usuario no encontrado.");
     } else {
-      if (!excercise.description || !excercise.duration) {
+      if (!exercise.description || !exercise.duration) {
         return res.json({ error: 'Description and duration are required.' });
       } else {
-        user.excercises.push(excercise);
+        user.exercises.push(exercise);
         user.save((err) => {
           if (err) throw err;
-          delete user.excercises;
-          user.excercises = [excercise];
-          return res.json(user);
+          //return res.json(user);
         })
+        user.duration = user.exercises[user.exercises.length - 1].duration;
+        user.description = user.exercises[user.exercises.length - 1].description;
+        user.date = user.exercises[user.exercises.length - 1].date;
+        return res.json({
+          _id: user._id,
+          username: user.username,
+          duration: user.exercises[user.exercises.length - 1].duration,
+          description: user.exercises[user.exercises.length - 1].description,
+          date: user.exercises[user.exercises.length - 1].date
+        });
       }
     }
   });
 });
 
 app.get("/api/users/:_id/logs", (req, res) => {
+  console.log(req.path);
   const id = req.params._id;
   const query = {
     from: req.query.from,
@@ -120,31 +129,19 @@ app.get("/api/users/:_id/logs", (req, res) => {
     to: false,
     limit: false
   }
-  var fromTo = () => {
-    if (searchFor.from) {
-      UserModel.where({ _id: id }).find({ date: { $gte: searchFor.from }, options: { limit: query.limit } }, (err, result) => {
-        if (err) throw "Error al buscar con limite y from";
-        return res.json(result);
-      });
-    } else {
-      UserModel.where({ _id: id }).find({ date: { $lte: searchFor.to }, options: { limit: query.limit } }, (err, result) => {
-        if (err) throw "Error al buscar con limite y to";
-        return res.json(result);
-      });
-    }
-  }
+
   if (!id) {
-    res.send("Error id required");
+    return res.json("Error id required");
   }
 
   if (!query.limit && !query.from && !query.to) {
     UserModel.findById(id, (err, user) => {
-      return res.json({ count: user.excercises.length });
+      return res.json({ count: user.exercises.length, log: user.exercises });
     })
   }
 
   if (query.limit) {
-    if (isNaN(query.limit)) throw "Limit must be a number"
+    if (isNaN(query.limit)) return res.json({ error: "Limit must be a number" });
     searchFor.limit = true;
   }
 
@@ -170,43 +167,77 @@ app.get("/api/users/:_id/logs", (req, res) => {
 
   console.log(searchFor)
   if (searchFor.from && searchFor.to && searchFor.limit) {
-    UserModel.findById(id, (err, user) => {
-      return res.json(
-        user.excercises.filter((excersice) => {
-          return excersice.date >= query.from && excersice.date <= query.to;
-        }).filter((excercise, index) => {
-          if (index < query.limit) return true;
-        })
-      )
+    console.log('all');
+    return UserModel.findById(id, (err, user) => {
+      if (err) return res.json({ error: 'Error searching user' });
+      return res.json({
+        log:
+          user.exercises.filter((exercise) => {
+            return exercise.date >= query.from && exercise.date <= query.to;
+          }).filter((exercise, index) => {
+            if (index < query.limit) return true;
+          })
+      })
     })
   } else if ((searchFor.from || searchFor.to) && searchFor.limit) {
-    return fromTo();
+    console.log('from || to & limit');
+    if (searchFor.from) {
+      return UserModel.where({ _id: id }).find({ date: { $gte: searchFor.from }, options: { limit: query.limit } }, (err, result) => {
+        if (err) return res.json({ error: 'Error searching user' });
+        return res.json({ log: result });
+      });
+    } else {
+      return UserModel.where({ _id: id }).find({ date: { $lte: searchFor.to }, options: { limit: query.limit } }, (err, result) => {
+        if (err) return res.json({ error: 'Error searching user' });
+        return res.json({ log: result });
+      });
+    }
   } else if (searchFor.limit) {
-    console.log('searching with only limit', query.limit)
-    UserModel.findById(id, (err, user) => {
-      return res.json(user.excercises.filter((_excersice, index) => {
-        if (index < query.limit) return true;
-      }));
+    console.log('limit')
+    return UserModel.findById(id, (err, user) => {
+      if (err) return res.json({ error: 'Error searching user' });
+      return res.json({
+        log: user.exercises.filter((_excersice, index) => {
+          if (index < query.limit) return true;
+        })
+      });
     })
   } else {
     //Has no limit
+    console.log('no limit');
     if (searchFor.from && searchFor.to) {
-      UserModel.findById(id, (err, user) => {
-        return res.json(user.excercises.filter((excersice) => {
-          return excersice.date >= query.from && excersice.date <= query.to;
+      console.log('from && to');
+      return UserModel.findById(id, (err, user) => {
+        if (err) return res.json({ error: 'Error searching user' });
+        console.log(user.exercises.filter((exercise) => {
+          return exercise.date >= query.from && exercise.date <= query.to;
         }))
+        return res.json({
+          log: user.exercises.filter((exercise) => {
+            return exercise.date >= query.from && exercise.date <= query.to;
+          })
+        })
       })
     } else if (searchFor.from) {
-      UserModel.findById(id, (err, user) => {
-        return res.json(user.excercises.filter((excersice) => {
-          return excersice.date >= query.from;
-        }))
+      console.log('from');
+      return UserModel.findById(id, (err, user) => {
+        if (err) return res.json({ error: 'Error searching user' });
+        return res.json({
+          log: user.exercises.filter((exercise) => {
+            return exercise.date >= query.from;
+          })
+        })
       })
-    } else {
-      UserModel.findById(id, (err, user) => {
-        return res.json(user.excercises.filter((excersice) => {
-          return excersice.date <= query.to;
-        }))
+    } else if (searchFor.to) {
+
+      console.log('to');
+      return UserModel.findById(id, (err, user) => {
+        if (err) return res.json({ error: 'Error searching user' });
+        return res.json({
+          log: user.exercises.filter((exercise) => {
+            return exercise.date <= query.to;
+          })
+        })
       })
     }
   }
